@@ -31,4 +31,4 @@ export MENTORMATES_PARTICIPANT_API_KEY="mm_sk_..."
 - **Organizer**: manage events, participants, approvals, projects, judges; send judge emails
 - **Participant**: discover + join events, submit and edit projects
 
-See [SKILL.md](./SKILL.md) for the full API reference.
+See [skills/mentormates/SKILL.md](./skills/mentormates/SKILL.md) for the full API reference.

@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - SKILL.md
+      - skills/mentormates/SKILL.md
   workflow_dispatch:
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
 
       - name: Copy SKILL.md
         run: |
-          cp source/SKILL.md marketplace/plugins/mentormates/skills/mentormates/SKILL.md
+          cp source/skills/mentormates/SKILL.md marketplace/plugins/mentormates/skills/mentormates/SKILL.md
 
       - name: Commit & push if changed
         working-directory: marketplace

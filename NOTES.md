@@ -4,9 +4,11 @@ Internal notes on how this skill is packaged, distributed, and where it should e
 
 ## Repo layout
 
-- **`SKILL.md`** — canonical skill content (organizer + participant agent APIs). Source of truth. Edit here.
+- **`skills/mentormates/SKILL.md`** — canonical skill content (organizer + participant agent APIs). Source of truth. Edit here.
+- **`.claude-plugin/plugin.json`** — makes this repo itself a valid Claude Code plugin install target, not just a marketplace source. Users can `/plugin install github.com/edumame/mentormates-skill` directly.
 - **`README.md`** — user-facing install + setup.
-- **`.github/workflows/sync-marketplace.yml`** — auto-mirrors SKILL.md to `edumame/mentormates-marketplace` on every push to main that touches the file. Requires `MARKETPLACE_PAT` repo secret (fine-grained PAT with `Contents: Read and write` on `edumame/mentormates-marketplace`).
+- **`LICENSE`** — MIT.
+- **`.github/workflows/sync-marketplace.yml`** — auto-mirrors `skills/mentormates/SKILL.md` to `edumame/mentormates-marketplace` on every push to main that touches the file. Requires `MARKETPLACE_PAT` repo secret (fine-grained PAT with `Contents: Read and write` on `edumame/mentormates-marketplace`).
 
 ## Sibling repo
 
