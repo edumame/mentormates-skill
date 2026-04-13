@@ -4,9 +4,14 @@ Agent skill for managing MentorMates hackathon events and participant submission
 
 ## Install
 
-```bash
-npx skills add edumame/mentormates-skill
+In Claude Code:
+
 ```
+/plugin marketplace add edumame/mentormates-marketplace
+/plugin install mentormates@mentormates-marketplace
+```
+
+Then invoke `/mentormates` in any session. The skill is packaged inside the [MentorMates marketplace](https://github.com/edumame/mentormates-marketplace) alongside `hackeragent`.
 
 ## Setup
 
