@@ -1,0 +1,42 @@
+name: Sync SKILL.md to marketplace
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - SKILL.md
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source (mentormates-skill)
+        uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: Checkout marketplace
+        uses: actions/checkout@v4
+        with:
+          repository: edumame/mentormates-marketplace
+          token: ${{ secrets.MARKETPLACE_PAT }}
+          path: marketplace
+
+      - name: Copy SKILL.md
+        run: |
+          cp source/SKILL.md marketplace/plugins/mentormates/skills/mentormates/SKILL.md
+
+      - name: Commit & push if changed
+        working-directory: marketplace
+        run: |
+          git config user.name "mentormates-sync-bot"
+          git config user.email "hello@mentor-mates.com"
+          if git diff --quiet; then
+            echo "No changes — SKILL.md already in sync."
+            exit 0
+          fi
+          SOURCE_SHA="${{ github.sha }}"
+          git add plugins/mentormates/skills/mentormates/SKILL.md
+          git commit -m "chore: sync SKILL.md from mentormates-skill@${SOURCE_SHA:0:7}"
+          git push
