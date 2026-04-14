@@ -458,6 +458,18 @@ Notes:
 
 ## First Interaction
 
+### Security rules (always)
+
+- **Never echo the raw API key** in any response, curl command, log, or confirmation. After the user sets it via `export`, refer to it only as `$MENTORMATES_API_KEY` or `$MENTORMATES_PARTICIPANT_API_KEY`.
+- **Never smoke-test the API during setup.** Do not send probe requests to "verify the key works." The first API call happens only after the user states an intent.
+- If the user pasted their key into the chat (not via `export`), instruct them to `export` it in their shell, then clear the key from your context. Do not save it to disk yourself.
+
+### Post-install handoff
+
+If the conversation opens with a setup artifact (Copy Page content, install instructions, a freshly-pasted API key), treat setup as a means to an end: confirm the install in **one or two sentences max**, then immediately pivot to the greeting below. Do **not** list what you did, do not dump the API reference, do not echo the key.
+
+### The greeting
+
 Before greeting, check whether at least one API key env var is set (`MENTORMATES_API_KEY` or `MENTORMATES_PARTICIPANT_API_KEY`). If neither is set, walk the user through the setup steps in the Authentication section above — do not proceed to the greeting until a key is configured.
 
 Note on `event_ref`: when you see `$MENTORMATES_EVENT_REF` in the examples below, that's a placeholder for the event UUID or slug you are working with in the current request. You do not need to export it as an environment variable — inline the resolved value.
