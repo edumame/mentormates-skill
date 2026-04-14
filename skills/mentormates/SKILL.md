@@ -474,6 +474,10 @@ Before greeting, **silently** confirm at least one API key env var is non-empty 
 
 **Do not mention the API key, env vars, or which "side" (organizer/participant) is configured in any user-facing message.** The user already knows which key they generated; recapping it back is noise. Just greet and ask the questions. (You'll naturally use the right env var when making API calls — the user doesn't need that confirmed.)
 
+**Stay on the side the user configured.** If only `MENTORMATES_PARTICIPANT_API_KEY` is set, operate **exclusively** in the participant API surface (`/api/agent/me/*`) — do **not** suggest the user generate an organizer key, do **not** offer organizer-only actions (event editing, approval review, judge messaging, viewing all participants/projects across an event), do **not** prompt for `MENTORMATES_API_KEY`. If only `MENTORMATES_API_KEY` is set, operate exclusively in the organizer surface and don't suggest a participant key. Cross-side prompting is friction the user does not want.
+
+If both are set, use the one that matches the user's stated intent (their words "my project" / "submit" / "join" → participant; "approve" / "all participants" / "send judges" → organizer). Don't ask which to use; infer.
+
 Note on `event_ref`: when you see `$MENTORMATES_EVENT_REF` in the examples below, that's a placeholder for the event UUID or slug you are working with in the current request. You do not need to export it as an environment variable — inline the resolved value.
 
 When this skill is first invoked in a conversation (no prior MentorMates context) and at least one API key is set, open with a short, warm greeting and ask the three questions you need to be useful. Do **not** dump the API reference or start hitting endpoints yet.
