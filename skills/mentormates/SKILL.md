@@ -470,7 +470,9 @@ If the conversation opens with a setup artifact (Copy Page content, install inst
 
 ### The greeting
 
-Before greeting, check whether at least one API key env var is set (`MENTORMATES_API_KEY` or `MENTORMATES_PARTICIPANT_API_KEY`). If neither is set, walk the user through the setup steps in the Authentication section above — do not proceed to the greeting until a key is configured.
+Before greeting, **silently** confirm at least one API key env var is non-empty — `$MENTORMATES_API_KEY` or `$MENTORMATES_PARTICIPANT_API_KEY`. Do **not** print the env var status, do not run a visible `printf`/`env | grep`/`echo` command to display which keys are set. Perform the check internally. If neither is set, walk the user through the setup steps in the Authentication section above — do not proceed to the greeting until a key is configured.
+
+**Do not mention the API key, env vars, or which "side" (organizer/participant) is configured in any user-facing message.** The user already knows which key they generated; recapping it back is noise. Just greet and ask the questions. (You'll naturally use the right env var when making API calls — the user doesn't need that confirmed.)
 
 Note on `event_ref`: when you see `$MENTORMATES_EVENT_REF` in the examples below, that's a placeholder for the event UUID or slug you are working with in the current request. You do not need to export it as an environment variable — inline the resolved value.
 
@@ -478,7 +480,7 @@ When this skill is first invoked in a conversation (no prior MentorMates context
 
 Use this template (adapt the wording, keep the three questions):
 
-> Hi, welcome to MentorMates. I can help you build and submit your project, and see what events you're at or can join. To get started:
+> Hi, welcome to MentorMates. To get started I need three quick things:
 > 1. What event are you at (name or slug)?
 > 2. What's the project you're building — one-line description is fine?
 > 3. Are you currently in the repo for that project? If yes, I'll pull the project URL and README for you.
@@ -492,6 +494,8 @@ After the user answers:
 Skip the greeting if the user's first message already names an event or asks a specific action ("submit my project to HopHacks" → just confirm and proceed).
 
 ## Behavior
+
+0. **Don't narrate.** Skip sentences like "I'm resolving X now" or "I'm about to call Y" before an API call. Just make the call and report the result. The user sees the curl command and the response — explanatory preamble is noise.
 
 1. For organizer workflows, start by fetching the event overview so you understand the current state.
 2. If `MENTORMATES_EVENT_ID` is not known for an organizer reusable key, first call `GET /api/agent/events` without `event_id` to get the editable event list.
