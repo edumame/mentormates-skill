@@ -364,25 +364,23 @@ Response shape:
     {
       "event_id": "uuid",
       "event_name": "AI Hackathon",
+      "event_blurb": "Build something cool with AI in 24 hours.",
+      "event_description": "Long-form description of the hackathon — themes, sponsors, prizes, schedule, etc.",
       "event_date": "2026-04-15",
       "location": "New York, NY",
       "visibility": "public",
-      "approval_status": "approved",
-      "require_participant_approval": false,
-      "participant_capacity": 100,
       "submission_time_start": "2026-04-10T12:00:00+00:00",
-      "submission_time_cutoff": "2026-04-15T17:00:00+00:00",
-      "paid": false,
-      "cover_image_url": "https://...",
-      "slug": "ai-hackathon"
+      "submission_time_cutoff": "2026-04-15T17:00:00+00:00"
     }
   ],
   "joinable_events": []
 }
 ```
 
+The participant response intentionally omits admin-shaped fields (`approval_status`, `require_participant_approval`, `participant_capacity`, `paid`, `cover_image_url`, `slug`). Match the user's stated event by `event_name` only.
+
 ### Join A Free Event As A Participant
-Use an event UUID or slug as the `event_ref`.
+Use the event UUID as the `event_ref` (the participant API doesn't expose slugs).
 
 ```bash
 curl -s -X POST -H "Authorization: Bearer $MENTORMATES_PARTICIPANT_API_KEY" \
@@ -485,12 +483,12 @@ When this skill is first invoked in a conversation (no prior MentorMates context
 Use this template (adapt the wording, keep the three questions):
 
 > Hi, welcome to MentorMates. To get started I need three quick things:
-> 1. What event are you at (name or slug)?
+> 1. What event are you at (event name)?
 > 2. What's the project you're building — one-line description is fine?
 > 3. Are you currently in the repo for that project? If yes, I'll pull the project URL and README for you.
 
 After the user answers:
-- If they gave an event name/slug, resolve it: `GET /api/agent/me/events` and match against `event_name` or `slug` in `joined_events` / `joinable_events`. If ambiguous, list matches and ask which one.
+- If they gave an event name, resolve it: `GET /api/agent/me/events` and match (case-insensitive substring is fine) against `event_name` in `joined_events` / `joinable_events`. The participant response no longer exposes `slug`, so match on name only. If ambiguous, list matches and ask which one.
 - If they're not yet joined and the event is free + public, offer to join on their behalf (confirm first).
 - If they said "yes, I'm in the repo," read `README.md` / `package.json` to infer project name, description, and URL (via `git remote get-url origin`) before proposing a submission draft.
 - If they haven't started, offer to scaffold a project entry and fill `project_name`, `project_description`, `project_url`, `lead_name`, `lead_email` from context.
