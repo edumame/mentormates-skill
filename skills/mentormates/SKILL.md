@@ -133,6 +133,10 @@ The event object returned by `GET /api/agent/events?event_id=...`:
 ```
 
 ### Updatable Event Fields (PATCH)
+
+The PATCH payload is `.strict()` — unknown keys return 400. Admin-only fields (`approval_status`, `rejection_reason`, `featured`) and immutable fields (`event_id`, `owner_id`, `created_at`) are intentionally excluded; trying to send them errors. `visibility: "archived"` is blocked on the agent API — use the dedicated archive route for that transition.
+
+**Text + identity**
 | Field | Type | Description |
 |-------|------|-------------|
 | `event_name` | string (1-200) | Event name |
@@ -140,10 +144,40 @@ The event object returned by `GET /api/agent/events?event_id=...`:
 | `event_blurb` | string (max 500) | Short tagline |
 | `event_date` | string | Date string, e.g. "2026-04-15" |
 | `location` | string (max 500) | Physical or virtual location |
+| `slug` | string (max 100, `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`) | URL slug — letters/digits/hyphen/underscore only |
+| `cover_image_url` | string (URL) or null | Cover image; `null` clears it |
+
+**Temporal**
+| Field | Type | Description |
+|-------|------|-------------|
 | `submission_time_start` | string or null | ISO timestamp for submission opening |
 | `submission_time_cutoff` | string or null | ISO timestamp for submission deadline |
+
+**Flags**
+| Field | Type | Description |
+|-------|------|-------------|
+| `require_participant_approval` | boolean | New participants need organizer approval |
+| `require_registration_questionnaire` | boolean | Require the registration questionnaire |
+| `finalist_recommendation_enabled` | boolean | Judges can flag finalist recommendations |
+| `paid` | boolean | Event is paid (pricing tiers managed separately) |
+
+**Numerics + enums**
+| Field | Type | Description |
+|-------|------|-------------|
 | `participant_capacity` | number or null | Max participants (null = unlimited) |
-| `require_participant_approval` | boolean | If true, new participants need organizer approval |
+| `visibility` | enum | `draft` \| `private` \| `public` \| `demo` \| `test` |
+
+**Arrays + JSONB structures** (each element is `.strict()` — extra keys rejected)
+| Field | Type | Description |
+|-------|------|-------------|
+| `event_type` | string[] | Event tags |
+| `event_prizes` | `{track, prize, description?}[]` | Prize tracks |
+| `event_schedule` | `object[]` | Day/time blocks — shape flexible |
+| `event_resources` | `{name, link (URL)}[]` | Linked resources |
+| `rules` | `{title, items[]}[]` | Rule sections |
+| `faq` | `{question, answer}[]` | FAQ entries |
+| `role_labels` | object or null | Custom role naming |
+| `scoring_config` | object or null | Judging config with tracks + criteria |
 
 ---
 
@@ -287,6 +321,67 @@ curl -s -X PATCH -H "Authorization: Bearer $MENTORMATES_API_KEY" -H "Content-Typ
   -d '{"event_name":"New Name","event_description":"Updated description","participant_capacity":100}' \
   "https://www.mentormates.ai/api/agent/events?event_id=$MENTORMATES_EVENT_ID" | jq
 ```
+
+Update the prize table, schedule, or resources by sending the structured arrays directly:
+
+```bash
+curl -s -X PATCH -H "Authorization: Bearer $MENTORMATES_API_KEY" -H "Content-Type: application/json" \
+  -d '{
+    "event_prizes": [
+      {"track":"Overall Winner","prize":"2x Electric Scooters","description":"Judges score on event day"},
+      {"track":"Most Technical","prize":"Nvidia Jetson Nano","description":"Judges score on event day"}
+    ],
+    "event_resources": [
+      {"name":"Starter kit","link":"https://github.com/org/kit"},
+      {"name":"Docs","link":"https://docs.example.com"}
+    ]
+  }' \
+  "https://www.mentormates.ai/api/agent/events?event_id=$MENTORMATES_EVENT_ID" | jq
+```
+
+Empty bodies return 400 — send at least one field.
+
+### Manage Event Lessons
+
+Lessons live in their own table (one-to-many on events) at `/api/agent/events/lessons`. All operations use the `event:write` scope (or `event:read` for GET).
+
+**List lessons for the event:**
+```bash
+curl -s -H "Authorization: Bearer $MENTORMATES_API_KEY" \
+  "https://www.mentormates.ai/api/agent/events/lessons?event_id=$MENTORMATES_EVENT_ID" | jq
+```
+
+**Create a lesson:**
+```bash
+curl -s -X POST -H "Authorization: Bearer $MENTORMATES_API_KEY" -H "Content-Type: application/json" \
+  -d '{
+    "title":"Intro to Agents",
+    "url":"https://youtube.com/...",
+    "cover_image_url":"https://img.example.com/intro.png",
+    "description":"Getting started with the agent framework.",
+    "duration_minutes":30
+  }' \
+  "https://www.mentormates.ai/api/agent/events/lessons?event_id=$MENTORMATES_EVENT_ID" | jq
+```
+
+Required: `title`, `url`, `cover_image_url`, `description`, `duration_minutes` (positive integer). All string URLs validated.
+
+**Update a lesson:**
+```bash
+curl -s -X PATCH -H "Authorization: Bearer $MENTORMATES_API_KEY" -H "Content-Type: application/json" \
+  -d '{"lesson_id":"LESSON_UUID","title":"Intro to Agents (v2)","duration_minutes":35}' \
+  "https://www.mentormates.ai/api/agent/events/lessons?event_id=$MENTORMATES_EVENT_ID" | jq
+```
+
+`lesson_id` (UUID) in body is required. Returns 404 if the lesson belongs to a different event.
+
+**Delete a lesson:**
+```bash
+curl -s -X DELETE -H "Authorization: Bearer $MENTORMATES_API_KEY" \
+  "https://www.mentormates.ai/api/agent/events/lessons?event_id=$MENTORMATES_EVENT_ID&lesson_id=LESSON_UUID" | jq
+```
+
+Pre-existence check runs first — 404 for cross-event or missing lessons.
 
 ### List Participants
 ```bash
@@ -437,6 +532,19 @@ Notes:
 - Use `POST /api/agent/me/events/$MENTORMATES_EVENT_REF/projects` to create a new project.
 - Do not send `projectId` in the create body.
 - The API accepts either `camelCase` or `snake_case` field names for common fields like `project_name` and `lead_email`.
+- **Always send `Content-Type: application/json` and a non-empty body.** Missing headers or malformed JSON return 400 with `{"error": "Request body must be valid JSON. Ensure Content-Type: application/json is set and the body is non-empty."}` — do not retry blindly.
+
+### Error response contract (participant + organizer)
+
+All agent API responses are JSON. Shapes:
+
+- **Success (create/list):** `{ "success": true, "project": {...} }` or `{ "projects": [...] }` — never includes `status` in body (HTTP header only).
+- **Validation error (400):** `{ "error": "Invalid request", "details": { "fieldErrors": { ... } } }` — Zod's `flatten()` shape.
+- **Service error (400/403/404/409/500):** `{ "error": "<human message>", "...extra fields..." }` — extra fields vary by error type (e.g., `event_name`, `submission_start`). Status is in HTTP header only.
+- **Auth failure (401/403):** `{ "error": "<reason>" }`.
+- **Malformed JSON (400):** `{ "error": "Request body must be valid JSON. Ensure Content-Type: application/json is set and the body is non-empty." }`.
+
+If the CLI ever sees a non-JSON response, assume the server crashed — server-side logs include structured events (`participant_projects_submit_crashed`, `participant_projects_submit_invalid_json`, etc.) with `eventRef`, `userId`, `keyId` context for debugging.
 
 ### Edit My Existing Project
 ```bash
